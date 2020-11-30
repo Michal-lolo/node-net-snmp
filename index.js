@@ -3090,6 +3090,14 @@ ModuleStore.prototype.getProvidersForModule = function (moduleName) {
 	var parentOid;
 	var integerEnumeration;
 
+	const formatDescription = str => {
+		if (str && typeof str === 'string') return str
+			.replace(/[\r|\n|\t]/g, '')
+			.replace(/^([^\.]*\.).*$/, '$1')
+			.replace(/\s+/g, ' ')
+			.trim();
+	};
+
 	if ( ! mibModule ) {
 		throw new ReferenceError ("MIB module " + moduleName + " not loaded");
 	}
@@ -3178,7 +3186,8 @@ ModuleStore.prototype.getProvidersForModule = function (moduleName) {
 							var columnDefinition = {
 								number: parseInt (mibEntry["OBJECT IDENTIFIER"].split (" ")[1]),
 								name: mibEntry.ObjectName,
-								type: syntaxTypes[syntax]
+								type: syntaxTypes[syntax],
+								description: formatDescription(mibEntry.DESCRIPTION)
 							};
 							if ( integerEnumeration ) {
 								columnDefinition.constraints = {
@@ -3201,7 +3210,8 @@ ModuleStore.prototype.getProvidersForModule = function (moduleName) {
 					name: mibEntry.ObjectName,
 					type: MibProviderType.Scalar,
 					oid: mibEntry.OID,
-					scalarType: syntaxTypes[syntax]
+					scalarType: syntaxTypes[syntax],
+					description: formatDescription(mibEntry.DESCRIPTION)
 				};
 				if ( integerEnumeration ) {
 					scalarDefinition.constraints = {
