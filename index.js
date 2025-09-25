@@ -3105,6 +3105,10 @@ ModuleStore.prototype.getProvidersForModule = function (moduleName) {
 	entryArray = Object.values (mibModule);
 	for ( var i = 0; i < entryArray.length ; i++ ) {
 		mibEntry = entryArray[i];
+		if(mibEntry.ObjectName === 'cbQosObjectsTable'){
+			console.log('\n\n\n','cbQosObjectsTable mibEntry:\n', JSON.stringify(mibEntry,null, 8),'\n\n\n');
+		}
+			
 		var syntax = mibEntry.SYNTAX;
 
 		if ( syntax ) {
