@@ -3103,13 +3103,8 @@ ModuleStore.prototype.getProvidersForModule = function (moduleName) {
 	}
 	syntaxTypes = this.getSyntaxTypes ();
 	entryArray = Object.values (mibModule);
-	console.log('\n\n\nmibModule:\n',JSON.stringify(mibModule, null, 8));
 	for ( var i = 0; i < entryArray.length ; i++ ) {
 		mibEntry = entryArray[i];
-		if(mibEntry.ObjectName === 'cbQosObjectsTable'){
-			console.log('\n\n\n','cbQosObjectsTable mibEntry:\n', JSON.stringify(mibEntry,null, 8),'\n\n\n');
-		}
-			
 		var syntax = mibEntry.SYNTAX;
 
 		if ( syntax ) {
