@@ -3158,23 +3158,45 @@ ModuleStore.prototype.getProvidersForModule = function (moduleName) {
 								currentTableProvider.tableIndex = [];
 								for ( var indexEntry of mibEntry.INDEX ) {
 									indexEntry = indexEntry.trim ();
+									var indexObj = {
+										columnName: indexEntry
+									};
+									
 									if ( indexEntry.includes(" ") ) {
 										if ( indexEntry.split(" ")[0] == "IMPLIED" ) {
-											currentTableProvider.tableIndex.push ({
-												columnName: indexEntry.split(" ")[1],
-												implied: true
-											});
+											indexObj.columnName = indexEntry.split(" ")[1];
+											indexObj.implied = true;
 										} else {
 											// unknown condition - guess that last token is name
-											currentTableProvider.tableIndex.push ({
-												columnName: indexEntry.split(" ").slice(-1)[0],
-											});
+											indexObj.columnName = indexEntry.split(" ").slice(-1)[0];
 										}
-									} else {
-										currentTableProvider.tableIndex.push ({
-											columnName: indexEntry
-										});
 									}
+									
+									// Look up the index object in the parsed MIB to get its type
+									var indexObject = null;
+									for (var moduleName in this.parser.Modules) {
+										if (this.parser.Modules.hasOwnProperty(moduleName)) {
+											var module = this.parser.Modules[moduleName];
+											if (module[indexObj.columnName]) {
+												indexObject = module[indexObj.columnName];
+												break;
+											}
+										}
+									}
+									
+									if (indexObject && indexObject.SYNTAX) {
+										// We found the index object in the MIB, use its type information
+										var syntax = indexObject.SYNTAX;
+										
+										// Handle INTEGER enumerations
+										if (typeof syntax == "object") {
+											syntax = "INTEGER";
+										}
+										
+										indexObj.type = syntaxTypes[syntax];
+									}
+									
+									currentTableProvider.tableIndex.push(indexObj);
 								}
 							}
 							if ( mibEntry.AUGMENTS ) {
@@ -3616,9 +3638,40 @@ Mib.prototype.getColumnFromProvider = function (provider, indexEntry) {
 Mib.prototype.populateIndexEntryFromColumn = function (localProvider, indexEntry, i) {
 	var column = null;
 	var tableProviders;
+	var indexObject = null;
+	
 	if ( ! indexEntry.columnName && ! indexEntry.columnNumber ) {
 		throw new Error ("Index entry " + i + ": does not have either a columnName or columnNumber");
 	}
+	
+	// First, try to find the index object in the parsed MIB structure
+	// This is the correct approach for index objects which are separate MIB objects
+	for (var moduleName in this.parser.Modules) {
+		if (this.parser.Modules.hasOwnProperty(moduleName)) {
+			var module = this.parser.Modules[moduleName];
+			if (module[indexEntry.columnName]) {
+				indexObject = module[indexEntry.columnName];
+				break;
+			}
+		}
+	}
+	
+	if (indexObject && indexObject.SYNTAX) {
+		// We found the index object in the MIB, use its type information
+		var syntaxTypes = this.getSyntaxTypes();
+		var syntax = indexObject.SYNTAX;
+		
+		// Handle INTEGER enumerations
+		if (typeof syntax == "object") {
+			syntax = "INTEGER";
+		}
+		
+		indexEntry.type = syntaxTypes[syntax];
+		indexEntry.columnName = indexEntry.columnName || indexObject.ObjectName;
+		return;
+	}
+	
+	// Fallback to the original logic for backward compatibility
 	if ( indexEntry.foreign ) {
 		// Explicit foreign table is first to search
 		column = this.getColumnFromProvider (this.providers[indexEntry.foreign], indexEntry);
